@@ -1,5 +1,5 @@
-(ns tatomic.tx-range
-  (:require [tatomic.ops :as d]))
+(ns tatomic.impl.tx-range
+  (:require [tatomic.impl.ops :as d]))
 
 (defn- without-tx [db [e a v _ added?]]
   [e (d/ident db a) v added?])

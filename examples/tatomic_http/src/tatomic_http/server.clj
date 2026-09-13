@@ -2,8 +2,8 @@
   (:require [org.httpkit.server :as http]
             [org.httpkit.client :as client]
             [tatomic-http.core :as api]
-            [tatomic.datomic.peer]
-            [tatomic.ops :as ops]
+            [tatomic.core :as tatomic]
+            [tatomic.impl.peer]
             [reitit.ring :as ring]
             [tatomic-http.response :as response]
             [tatomic-http.streaming-response :as streaming]
@@ -18,7 +18,7 @@
       {:status 400
        :body "Invalid t path parameter."}
       (try
-        (response/response req (ops/t->tx (:conn @my-server) t))
+        (response/response req (tatomic/t->tx (:conn @my-server) t))
         (catch Exception e
           {:status 400
            :body (ex-message e)})))))
@@ -29,7 +29,7 @@
       {:status 400
        :body "Invalid tx path parameter."}
       (try
-        (response/response req (ops/tx->t (:conn @my-server) tx))
+        (response/response req (tatomic/tx->t (:conn @my-server) tx))
         (catch Exception e
           {:status 400
            :body (ex-message e)})))))
@@ -90,6 +90,7 @@
 
 (comment
   (def peer-url "datomic:dev://localhost:4334/min-databas?password=datomic")
+  (require '[datomic.api :as d])
   (require '[clojure.pprint :refer [pprint]])
   (require '[clojure.edn :refer [read-string]] )
   (def conn (d/connect peer-url))

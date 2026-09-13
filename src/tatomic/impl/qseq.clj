@@ -1,12 +1,12 @@
 
-(ns tatomic.qseq
+(ns tatomic.impl.qseq
   "wrapper around qseq where db is their t"
-  (:require [tatomic.ops :as d]
-            [coretools.existing :refer [update-in-existing]]
-            [coretools.keyword :refer [qualified-keyword
-                                       non-empty-namespace-key]]
+  (:require [tatomic.impl.ops :as d]
+            [tatomic.impl.existing :refer [update-in-existing]]
+            [tatomic.impl.keyword :refer [qualified-keyword
+                                          non-empty-namespace-key]]
             [clojure.test :refer [testing is]]
-            [tatomic.db :as db]
+            [tatomic.impl.db :as db]
             [tatomic.test :refer [unit-test
                               prepare-test]]
             [clojure.string :as str]
@@ -205,6 +205,7 @@ not yet exist."
   (is (= {:a 1} (edn-seq-to-map {:a 1})))
   (is (= {:query [1 2 3]} (edn-seq-to-map [[1 2 3]]))))
 ;; Den här ska förmodligen ta conn & edn
+
 (defn qseq [conn edn]
   (let [{:keys [query inputs timeout io-context] :or {timeout 60000}} (edn-seq-to-map edn)
         query-as-map (query-list-to-map query)
@@ -227,7 +228,7 @@ not yet exist."
                      :basis-t (d/basis-t db)}
               t (assoc :t t))
             (update-in-existing [:io-stats :io-context]
-                                non-empty-namespace-key))))))
+                non-empty-namespace-key))))))
 
 (unit-test
   

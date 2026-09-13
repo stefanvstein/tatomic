@@ -1,5 +1,5 @@
-(ns tatomic.db
-  (:require [tatomic.ops :as d])
+(ns tatomic.impl.db
+  (:require [tatomic.impl.ops :as d])
   (:refer-clojure :exclude [sync]))
 
 (defn as-of [conn db t timeout]
@@ -18,6 +18,15 @@
     (if t
       (as-of conn db-now t timeout)
       db-now)))
+
+(defn current-t [conn]
+  (d/basis-t (d/db conn)))
+
+(defn tx->t [conn tx-eid]
+  (d/tx->t conn tx-eid))
+
+(defn t->tx [conn t]
+  (d/t->tx conn t))
 
 (defn entid [conn edn]
   (let [{:keys [ident t time-out]

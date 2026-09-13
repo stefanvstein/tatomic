@@ -1,10 +1,10 @@
-(ns tatomic.pull
+(ns tatomic.impl.pull
   (:require [tatomic.time :refer [now]]
-            [coretools.keyword :refer [qualified-keyword non-empty-namespace-key]]
-            [tatomic.ops :as d]
+            [tatomic.impl.keyword :refer [qualified-keyword non-empty-namespace-key]]
+            [tatomic.impl.ops :as d]
            
-            [tatomic.db :as db]
-            [coretools.existing :refer [update-in-existing]]
+            [tatomic.impl.db :as db]
+            [tatomic.impl.existing :refer [update-in-existing]]
             [clojure.test :refer [testing is]]
             [tatomic.test :refer [unit-test prepare-test]]))
 

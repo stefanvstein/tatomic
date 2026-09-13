@@ -1,20 +1,13 @@
 (ns tatomic-http.core
   (:require [clojure.edn :as edn]
             [clojure.repl :refer [pst]]
-            [tatomic.ops :as d]
-            [tatomic.test :refer [unit-test prepare-test]]
-            [tatomic.transact :as transact]
-            [tatomic.pull :as pull]
-            [tatomic.qseq :as qseq]
-            [tatomic.tx-range :as tx-range]
-            [tatomic.db :as web-db]
-            [clojure.test :refer [testing is]])
+            [tatomic.core :as tatomic])
   (:refer-clojure :exclude [sync]))
 
 
 
 (defn db [conn]
-  [200 (d/basis-t (d/db conn))])
+  [200 (tatomic/current-t conn)])
 
 
 (defn pull [conn edn]
@@ -23,7 +16,7 @@
       (pull conn (edn/read-string edn))
       (catch Exception e [400 (ex-message e)]))
     (try
-      (let [res (pull/pull conn edn)]
+      (let [res (tatomic/pull conn edn)]
         (if-let [e (:error res)]
           [400 e]
           [200 res]))
@@ -31,30 +24,13 @@
                   [500 (ex-message e)]))))
 
 
-(unit-test
-  (testing "pull requests"
-    ((requiring-resolve 'tatomic.logging/set-root-level!) :info)
-    ((requiring-resolve 'tatomic.logging/set-logger-level!) "datomic" :warn)
-    (def conn (prepare-test "pull"))
-    (def v (pull conn  "{:pattern [:person/name] :eid [:person/id \"adam 1\"] :io-context olle}"))
-    (def ret (second v))
-    (->> "Ok http status, string request"
-         (is (= 200 (first v))))
-
-    (is (= "Adam Andersson" (:person/name (:ret ret)))
-        "Found name, string request")
-    
-    (is (= [400 ":pattern and :eid required for pull."] (pull conn {:pattern [:person/name]}))
-        "require :eid"))
-  :eoc)
-
 (defn qseq [conn edn]
   (if (string? edn)
     (try
       (qseq conn (edn/read-string edn))
       (catch Exception e [400 (ex-message e)]))
     (try
-      (let [res (qseq/qseq conn edn)]
+      (let [res (tatomic/qseq conn edn)]
         (if-let [e (:error res)]
           [400 e]
           [200 res]))
@@ -70,7 +46,7 @@
         (pst e)
         [400 (ex-message e)]))
     (try
-      [200 (tx-range/tx-range conn edn)]
+      [200 (tatomic/tx-range conn edn)]
       (catch Exception e [500 (ex-message e)]))))
 
 
@@ -81,7 +57,7 @@
       (entid conn (edn/read-string edn))
       (catch Exception e (.printStackTrace e) [400 (ex-message e)]))
     (try
-      (let [res (web-db/entid conn edn)]
+      (let [res (tatomic/entid conn edn)]
         (if-let [e (:error res)]
           [400 e]
           [200 res]))
@@ -93,7 +69,7 @@
       (ident conn (edn/read-string edn))
       (catch Exception e (.printStackTrace e) [400 (ex-message e)]))
     (try
-      (let [res (web-db/ident conn edn)]
+      (let [res (tatomic/ident conn edn)]
         (if-let [e (:error res)]
           [400 e]
           [200 res]))
@@ -105,7 +81,7 @@
       (sync conn (edn/read-string edn))
       (catch Exception e (.printStackTrace e) [400 (ex-message e)]))
     (try
-      (let [res (web-db/sync conn edn)]
+      (let [res (tatomic/sync conn edn)]
         (if-let [e (:error res)]
           [400 e]
           [200 res]))
@@ -117,15 +93,16 @@
       [200 (transact conn (edn/read-string edn))]
       (catch Exception e [400 (ex-message e)]))
     (try
-      [200 (transact/transact conn edn)]
+      [200 (tatomic/transact conn edn)]
       (catch Exception e [500 (ex-message e)]))))
 
 ;; 
 (comment
   (do
     (def peer-url "datomic:dev://localhost:4334/min-databas?password=datomic")
-    (require '[datomictools.peerdb :as peer])    
-    (def conn (peer/connect peer-url)))
+    (require '[datomic.api :as d])
+    (d/create-database peer-url)
+    (def conn (d/connect peer-url)))
   
   (pull conn  "{:pattern [*] :eid [:person/id \"erik-5\"] :io-context olle}")
   

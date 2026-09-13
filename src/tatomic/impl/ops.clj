@@ -1,4 +1,4 @@
-(ns tatomic.ops
+(ns tatomic.impl.ops
   (:refer-clojure :exclude [sync]))
 
 (defprotocol Ops

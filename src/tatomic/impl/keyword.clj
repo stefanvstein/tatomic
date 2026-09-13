@@ -1,4 +1,4 @@
-(ns coretools.keyword)
+(ns tatomic.impl.keyword)
 
 (defn qualified-keyword [key]
   (if (namespace (keyword key))

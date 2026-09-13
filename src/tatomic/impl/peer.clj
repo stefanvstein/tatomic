@@ -1,6 +1,6 @@
-(ns tatomic.datomic.peer
+(ns tatomic.impl.peer
   (:require [datomic.api :as d]
-            [tatomic.ops :as ops])
+            [tatomic.impl.ops :as ops])
   (:refer-clojure :exclude [sync]))
 
 (defn- transact* [conn tx opts]

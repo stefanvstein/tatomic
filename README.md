@@ -3,14 +3,14 @@
 Tatomic is a small interface for database operations where callers use `t`
 values instead of holding database values directly.
 
-The core namespaces live under `tatomic.*` and focus on operations such as
-`pull`, `qseq`, `transact`, `tx-range`, `entid`, `ident`, and `sync`. The core
-does not depend on Datomic libraries directly. Datomic support is provided by
-optional adapters.
+The public command API lives in `tatomic.core` and focuses on operations such
+as `pull`, `qseq`, `transact`, `tx-range`, `entid`, `ident`, and `sync`. The
+core does not depend on Datomic libraries directly. Datomic support is provided
+by optional adapters.
 
-The HTTP interface is kept aside as an example adapter in `examples/tatomic_http`.
-Load it with the `:http-example` alias when you want to expose the same
-t-oriented API over HTTP.
+The HTTP interface is kept aside as a separate example project in
+`examples/tatomic_http`. It has its own `deps.edn` and shows how an application
+can depend on tatomic and choose the Datomic Peer adapter at the edge.
 
 ## Dependencies
 
@@ -34,8 +34,8 @@ Use Datomic Peer without pulling in `datomic.client.api`:
 Then load the peer adapter before calling `tatomic.*` operations:
 
 ```clojure
-(require '[tatomic.datomic.peer])
-(require '[tatomic.pull :as pull])
+(require '[tatomic.impl.peer])
+(require '[tatomic.core :as tatomic])
 ```
 
 Use a Datomic Client based runtime by depending on a library that provides
@@ -51,13 +51,50 @@ Use a Datomic Client based runtime by depending on a library that provides
 Then load the client adapter:
 
 ```clojure
-(require '[tatomic.datomic.client])
-(require '[tatomic.qseq :as qseq])
+(require '[tatomic.impl.client])
+(require '[tatomic.core :as tatomic])
 ```
 
-`tatomic.datomic` is available as a convenience namespace that loads both
-adapters. Use `tatomic.datomic.peer` or `tatomic.datomic.client` when you want
-to keep dependencies narrow.
+Load only the adapter you need to keep dependencies narrow.
+
+## API
+
+Require the public command namespace:
+
+```clojure
+(require '[tatomic.core :as tatomic])
+```
+
+### pull
+
+`pull` reads one entity using the selected adapter's pull pattern syntax and
+wraps the result in a Tatomic response map.
+
+```clojure
+(tatomic/pull conn {:pattern [:person/name]
+                    :eid [:person/id "adam 1"]})
+;; => {:ret {:person/name "Adam"}
+;;     :t 1001
+;;     :basis-t 1001}
+```
+
+Tatomic-specific request keys:
+
+| key | meaning |
+| --- | --- |
+| `:pattern` | Required. Pull pattern passed to the adapter. |
+| `:eid` | Required. Entity id, ident, or lookup ref. |
+| `:t` | Optional. Read from the database value at this t. |
+| `:timeout` | Optional. Milliseconds to wait for a requested future t. Defaults to `60000`. |
+| `:io-context` | Optional. Passed to adapters that support IO stats/context. |
+
+On success, `pull` returns `:ret`, the effective read `:t`, and the current
+`:basis-t`. If `:pattern` or `:eid` is missing, or if the requested `:t` cannot
+be reached before timeout, it returns `{:error ...}`.
+
+For Datomic adapters, `:pattern` and `:eid` follow Datomic Pull semantics; see
+the official Datomic Pull reference:
+https://docs.datomic.com/query/query-pull.html
 
 During local development, use `:local/root` instead of the Git coordinate:
 
@@ -73,16 +110,28 @@ Start a REPL with:
 clojure -M:dev
 ```
 
+Start a development REPL where inline `unit-test` forms can call
+`tatomic.test/prepare-test` with a Datomic Peer in-memory database:
+
+```sh
+clojure -M:dev:datomic-peer
+```
+
+In Emacs/CIDER with clojure-cli, jack in with aliases `:dev:datomic-peer`
+(for example with `C-u M-x cider-jack-in-clj`, or by setting
+`cider-clojure-cli-aliases` to `":dev:datomic-peer"`).
+
 Run tests with:
 
 ```sh
 clojure -M:test
 ```
 
-Load the HTTP example with:
+Load the HTTP example from its own project directory with:
 
 ```sh
-clojure -M:http-example
+cd examples/tatomic_http
+clojure -M
 ```
 
 Load only the Datomic Peer adapter without the HTTP example with:

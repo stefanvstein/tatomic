@@ -1,4 +1,4 @@
-(ns coretools.existing)
+(ns tatomic.impl.existing)
 
 (defmacro update-existing
   [m ks f & args]
@@ -27,4 +27,3 @@
      (if (contains-in? m# ks#)
        (update-in m# ks# ~f ~@args)
        m#)))
-

@@ -1,6 +1,6 @@
-(ns tatomic.datomic.client
+(ns tatomic.impl.client
   (:require [datomic.client.api :as dc]
-            [tatomic.ops :as ops])
+            [tatomic.impl.ops :as ops])
   (:refer-clojure :exclude [sync]))
 
 (defn- entid-client [db eid-or-ident]
