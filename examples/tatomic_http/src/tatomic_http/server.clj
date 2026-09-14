@@ -2,8 +2,8 @@
   (:require [org.httpkit.server :as http]
             [org.httpkit.client :as client]
             [tatomic-http.core :as api]
+            [tatomic-http.body :as body]
             [tatomic.core :as tatomic]
-            [tatomic.impl.peer]
             [reitit.ring :as ring]
             [tatomic-http.response :as response]
             [tatomic-http.streaming-response :as streaming]
@@ -41,7 +41,7 @@
 
 
 (defn database-call [call conn req]
-  (let [body (-> req :body slurp)
+  (let [body (body/read-body req)
         [code data] (call conn body)]
     (if (= 200 code)
       (response/response req data)
@@ -68,14 +68,17 @@
 
 
 
-(defn start [conn]
-  
+(defn start
+  ([conn]
+   (start conn {}))
+  ([conn {:keys [port] :or {port 8091}}]
   (swap! my-server (fn [s]
                      (if (nil? s)
                        {:conn conn
-                        :server (http/run-server #'app {:port 8091
-                                                        :server-header "datomictutor"})}
-                       s))))
+                        :server (http/run-server #'app {:port port
+                                                        :server-header "datomictutor"})
+                        :port port}
+                       s)))))
 (defn stop []
   (swap! my-server (fn [{s :server}]
                      (if s

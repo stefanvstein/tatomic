@@ -2,11 +2,16 @@
   (:require [tatomic.impl.ops :as d])
   (:refer-clojure :exclude [sync]))
 
+(defn- await-db [x timeout timeout-value]
+  (if (instance? java.util.concurrent.Future x)
+    (deref x timeout timeout-value)
+    x))
+
 (defn as-of [conn db t timeout]
   (let [basis (d/basis-t db)]
     (if (integer? t)
       (if (<= basis t)
-        (let [enough-db (deref (d/sync conn t) timeout :timeout)]
+        (let [enough-db (await-db (d/sync conn t) timeout :timeout)]
           (if (= :timeout enough-db)
             nil       
             (d/as-of enough-db t)))
@@ -60,10 +65,10 @@
   (let [{:keys [t time-out]
          :or {time-out 60000}} edn
         start (System/currentTimeMillis)
-        db (deref (if t
-                    (d/sync conn t)
-                    (d/sync conn))
-                  time-out nil)]
+        db (await-db (if t
+                       (d/sync conn t)
+                       (d/sync conn))
+                     time-out nil)]
     (cond
       (and (nil? db) t) {:error (str "Requested t " t " not available for "
                                      (- (System/currentTimeMillis) start) " ms.")}

@@ -90,7 +90,7 @@
 (defn transact [conn edn ]
   (if (string? edn)
     (try
-      [200 (transact conn (edn/read-string edn))]
+      (transact conn (edn/read-string edn))
       (catch Exception e [400 (ex-message e)]))
     (try
       [200 (tatomic/transact conn edn)]

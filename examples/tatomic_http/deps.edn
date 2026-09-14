@@ -1,7 +1,12 @@
 {:paths ["src"]
  :deps {stefanvstein/tatomic {:local/root "../.."}
-        com.datomic/peer {:mvn/version "1.0.7622"}
         cheshire/cheshire {:mvn/version "6.2.0"}
         http-kit/http-kit {:mvn/version "2.8.1"}
         metosin/reitit-ring {:mvn/version "0.10.1"}}
- :aliases {:dev {:extra-paths ["dev"]}}}
+ :aliases {:peer {:extra-deps {com.datomic/peer {:mvn/version "1.0.7622"}}}
+           :local {:extra-deps {com.datomic/local {:mvn/version "1.0.291"}}}
+           :run {:extra-deps {com.datomic/local {:mvn/version "1.0.291"}}
+                 :main-opts ["-m" "tatomic-http.run"]}
+           :dev {:extra-paths ["dev"]}
+           :test {:extra-paths ["test"]
+                  :extra-deps {com.datomic/local {:mvn/version "1.0.291"}}}}}

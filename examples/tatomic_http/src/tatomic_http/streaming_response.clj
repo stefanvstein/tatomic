@@ -1,6 +1,7 @@
 (ns tatomic-http.streaming-response
   (:require [org.httpkit.server :as http]
             [cheshire.core :as json]
+            [tatomic-http.body :as body]
             [tatomic-http.response :as response]))
 
 (defn response-edn [data req content-type]
@@ -41,32 +42,9 @@
         (http/send! ch (str "\n  " (write-json (first xs))) false)))))
 
 (defn response-json [data req]
-  (http/as-channel
-   req
-   {:on-open (fn [ch]
-               (http/send! ch {:status 200
-                               :headers {"Content-Type" "application/json"}
-                               :body "\n{"} false)
-               (try
-                 (http/send! ch "\"ret\":[" false)
-                 (json-elements! ch (:ret data) json/encode)
-
-                 (let [other (dissoc data :ret)]
-                   (if (empty? other)
-                     (http/send! ch "       ]}" true)
-                     (let [remaining
-                           (apply str (for [k (keys other)]
-                                        (str "\n "
-                                             (json/encode k)
-                                             ":"
-                                             (json/encode (get other k)))))]
-                       (when (http/open? ch)
-                         (http/send! ch (str "]," remaining  "}\n") true)))))
-                 (catch Throwable t
-                   (when (http/open? ch)
-                     (http/send! ch
-                                 (str (json/encode {:error (.getMessage t)}) "\n")
-                                 true)))))}))
+  {:status 200
+   :headers {"Content-Type" "application/json"}
+   :body (json/encode (update data :ret vec))})
 
 
 (defn response [data req]
@@ -76,7 +54,7 @@
         :edn-text (response-edn data req "text/plain")))
 
 (defn ret-call [call conn req]
-  (let [body (-> req :body slurp)
+  (let [body (body/read-body req)
         [code data] (call conn body)]
     (if (= 200 code)
       (response data req)

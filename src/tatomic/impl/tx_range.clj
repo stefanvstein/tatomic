@@ -11,5 +11,5 @@
   (let [{:keys [from to]} edn
         db (d/db conn)
         range (->> (d/tx-range conn from to)
-                   (map #(update % :data each-without-tx db)))]
+                   (map #(update % :data (partial each-without-tx db))))]
     {:ret range}))

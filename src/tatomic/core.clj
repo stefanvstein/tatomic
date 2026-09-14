@@ -36,11 +36,13 @@
   which attributes, values, and relations should match with Datalog. The result 
   can be consumed step by step instead of requiring a fully realized collection.
 
-  `edn` can be:
+  Tatomic normalizes several request shapes before calling the adapter:
   - `{:query query}` where query is a Datomic query map or query vector.
   - `{:query query :inputs [...]}` for queries with an `:in` clause.
-  - A query map, query vector, or a sequence whose first element is the query
-    and the remaining elements are inputs.
+  - A query map, for example `{:find [?e] :where [[?e :person/id]]}`.
+  - A query vector beginning with `:find`.
+  - A sequence whose first element is the query and whose remaining elements
+    are inputs.
 
   Tatomic supplies the current database for `$` when no explicit database input
   is provided. Database inputs can also be a t value, which will be translated 
@@ -159,9 +161,7 @@
   Datomic represents each transaction as an entity. `t->tx` returns the entity
   id for the transaction at the given database t.
 
-  Returns the adapter result directly. Not every adapter supports this
-  operation; the Datomic client adapter currently throws
-  `UnsupportedOperationException`."
+  Returns the adapter result directly."
   [conn t]
   (db/t->tx conn t))
 

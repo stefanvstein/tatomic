@@ -33,6 +33,10 @@
                     {:value eid-or-ident
                      :type (type eid-or-ident)}))))
 
+(defn- tx-eid [tx]
+  (when-let [datom (some-> tx :data first)]
+    (nth datom 0)))
+
 (extend-protocol ops/Ops
   Object
   (db [conn] (dc/db conn))
@@ -56,9 +60,11 @@
       (when-not tx
         (throw (ex-info "No tx found for tx-eid" {:tx-eid tx-eid})))
       (:t tx)))
-  (t->tx [_ t]
-    (throw (UnsupportedOperationException.
-            "t->tx is not implemented for the Datomic client adapter.")))
+  (t->tx [conn t]
+    (let [tx (first (dc/tx-range conn {:start t :end (inc t)}))]
+      (when-not tx
+        (throw (ex-info "No tx found for t" {:t t})))
+      (tx-eid tx)))
   (tx-range [conn start end] (dc/tx-range conn {:start start :end end}))
   (basis-t [db] (:t db))
   (ident [db a-eid] (-> (dc/pull db '[:db/ident] a-eid)
