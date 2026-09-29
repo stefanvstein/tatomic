@@ -21,7 +21,7 @@
   (if (string? k)
     (if (str/starts-with? k ":")
       (keyword (subs k 1))
-      (keyword k))
+      k)
     k))
 
 (defn- json->edn-data [x]

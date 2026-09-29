@@ -189,21 +189,26 @@ not yet exist."
     
     :else edn))
 
+(comment
+  (edn-seq-to-map [[:find 1 2 3] 34]))
 (unit-test
-  (defn- query-find-help? [x] (= {:query {:find :help}}
-                                 (edn-seq-to-map x)))
-  (is (query-find-help? {:find :help}))
-  (is (not (query-find-help? {:query {:find :help} :other :things})))
-  (is (not (query-find-help? [{:query {:find :help} :other :things}])))
-  (is (query-find-help? [{:find :help}]))
-  (is (= {:query [:find :help]} (edn-seq-to-map [:find :help])))
-  (edn-seq-to-map [:find :help])
-  (edn-seq-to-map {:find :help})
-  )
+  
+  (is (= {:query {:find :help}}
+         (edn-seq-to-map {:find :help})))
+  (is (= {:query [:find :help]}
+         (edn-seq-to-map [:find :help])))
+  (is (= {:query {:find :help} :other :things}
+         (edn-seq-to-map {:query {:find :help} :other :things})))
+  (is (= {:query [:find 1 2 3], :inputs [34]}
+         ( edn-seq-to-map [[:find 1 2 3] 34])))
+  (is (= {:query {:find [1 2 3]}, :inputs [34 35]}
+         ( edn-seq-to-map [{:find [1 2 3]} 34 35])))
+  (is (edn-seq-to-map [{:find :help} 34]))
+      )
 
 (unit-test
   (is (= {:a 1} (edn-seq-to-map {:a 1})))
-  (is (= {:query [1 2 3]} (edn-seq-to-map [[1 2 3]]))))
+  (is (= {:query [1 2 3]} (edn-seq-to-map [[1 2 3]] ))))
 ;; Den här ska förmodligen ta conn & edn
 
 (defn qseq [conn edn]

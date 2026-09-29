@@ -91,7 +91,7 @@
 
   Optional keys:
   - `:t` reads from the database value at that t instead of the current db.
-  - `:time-out` waits this many milliseconds for a requested future t. Defaults
+  - `:timeout` waits this many milliseconds for a requested future t. Defaults
     to 60000.
 
   Returns `{:ret entity-id :t read-t :basis-t current-basis-t}` on success, or
@@ -111,7 +111,7 @@
 
   Optional keys:
   - `:t` reads from the database value at that t instead of the current db.
-  - `:time-out` waits this many milliseconds for a requested future t. Defaults
+  - `:timeout` waits this many milliseconds for a requested future t. Defaults
     to 60000.
 
   Returns `{:ret ident-keyword :t read-t :basis-t current-basis-t}` on success,
@@ -127,7 +127,7 @@
   Without `:t`, syncs to the adapter's current reachable database value.
 
   Optional keys:
-  - `:time-out` waits this many milliseconds. Defaults to 60000.
+  - `:timeout` waits this many milliseconds. Defaults to 60000.
 
   Returns `{:ret basis-t}` with the synchronized basis t on success, or
   `{:error message}` if the requested t is not available before the timeout.

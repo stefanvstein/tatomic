@@ -6,7 +6,6 @@
             [tatomic.core :as tatomic]
             [reitit.ring :as ring]
             [tatomic-http.response :as response]
-            [tatomic-http.streaming-response :as streaming]
             #_[reitit.ring.middleware.parameters :as parameters]
             ))
 
@@ -54,14 +53,16 @@
   (ring/ring-handler
     (ring/router
       [["/pull" {:post #(database-call api/pull (:conn @my-server) %)}]
-       ["/q" {:post #(streaming/ret-call api/qseq (:conn @my-server) %)}]
+       ["/q" {:post #(response/ret-call api/qseq (:conn @my-server) %)}]
        ["/transact" {:post #(database-call api/transact (:conn @my-server) %)}]
-       ["/txrange" {:post #(streaming/ret-call api/tx-range (:conn @my-server) %)}]
+       ["/tx-range" {:post #(response/ret-call api/tx-range (:conn @my-server) %)}]
        ["/entid" {:post #(database-call api/entid (:conn @my-server) %)}]
        ["/ident" {:post #(database-call api/ident (:conn @my-server) %)}]
        ["/sync" {:post #(database-call api/sync (:conn @my-server) %)}]
-       ["/totx/:t" {:get t->tx-handler}]
-       ["/tot/:tx" {:get tx->t-handler}]])))
+       ["/t-to-tx/:t" {:get t->tx-handler}]
+       ["/tx-to-t/:tx" {:get tx->t-handler}]
+
+       #_["/reset" {:post rest-handler}]])))
 
      
 
@@ -146,7 +147,7 @@
                            ))
   (read-body @(client/post "http://localhost:8091/transact"
                            {:body (prn-str [{:db/id "eid" :person/name "Ville"}])}))
-  (read-body @(client/post "http://localhost:8091/txrange"
+  (read-body @(client/post "http://localhost:8091/tx-range"
                            {:body (prn-str {:from 1020 :to 1030})}))
 
   (d/entid (d/db conn) [:person/id "bertil-id-23" ])

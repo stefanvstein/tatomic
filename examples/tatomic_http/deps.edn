@@ -5,8 +5,11 @@
         metosin/reitit-ring {:mvn/version "0.10.1"}}
  :aliases {:peer {:extra-deps {com.datomic/peer {:mvn/version "1.0.7622"}}}
            :local {:extra-deps {com.datomic/local {:mvn/version "1.0.291"}}}
+           :runmem {:extra-deps {com.datomic/peer {:mvn/version "1.0.7622"}}
+                    :main-opts ["-m" "tatomic-http.runmem"]}
            :run {:extra-deps {com.datomic/local {:mvn/version "1.0.291"}}
                  :main-opts ["-m" "tatomic-http.run"]}
            :dev {:extra-paths ["dev"]}
-           :test {:extra-paths ["test"]
-                  :extra-deps {com.datomic/local {:mvn/version "1.0.291"}}}}}
+           :test {:extra-paths ["test"]}}}
+
+;; Cider Tip run C-u M-x cider-jack-in-clj; followed :peer to use the peer alias 

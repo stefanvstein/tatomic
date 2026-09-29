@@ -34,10 +34,10 @@
   (d/t->tx conn t))
 
 (defn entid [conn edn]
-  (let [{:keys [ident t time-out]
-         :or {time-out 60000}} edn
+  (let [{:keys [ident t timeout]
+         :or {timeout 60000}} edn
         start (System/currentTimeMillis)
-        db (db-of-t conn t time-out)]
+        db (db-of-t conn t timeout)]
     (cond
       (nil? db) {:error (str "Requested t " t " not available for "
                              (- (System/currentTimeMillis) start) " ms.")}
@@ -48,10 +48,10 @@
              :basis-t (d/basis-t (d/db conn))})))
 
 (defn ident [conn edn]
-  (let [{:keys [eid t time-out]
-         :or {time-out 60000}} edn
+  (let [{:keys [eid t timeout]
+         :or {timeout 60000}} edn
         start (System/currentTimeMillis)
-        db (db-of-t conn t time-out)]
+        db (db-of-t conn t timeout)]
     (cond
       (nil? db) {:error (str "Requested t " t " not available for "
                              (- (System/currentTimeMillis) start) " ms.")}
@@ -62,13 +62,13 @@
              :basis-t (d/basis-t (d/db conn))})))
 
 (defn sync [conn edn]
-  (let [{:keys [t time-out]
-         :or {time-out 60000}} edn
+  (let [{:keys [t timeout]
+         :or {timeout 60000}} edn
         start (System/currentTimeMillis)
         db (await-db (if t
                        (d/sync conn t)
                        (d/sync conn))
-                     time-out nil)]
+                     timeout nil)]
     (cond
       (and (nil? db) t) {:error (str "Requested t " t " not available for "
                                      (- (System/currentTimeMillis) start) " ms.")}

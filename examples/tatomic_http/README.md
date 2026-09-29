@@ -1,16 +1,29 @@
 # tatomic HTTP example
 
 This is a standalone example project that depends on tatomic through
-`:local/root` and chooses the Datomic Peer adapter at the application edge.
+`:local/root`. It can use either the Datomic Peer or Client adapter at the
+application edge.
 
-Run the tutorial server against Datomic Local from this directory:
+Run the Python tutorial from this directory:
+
+```sh
+python3 test/tutorial_http.py
+```
+
+The tutorial chooses a free port, starts `tatomic-http.runmem` against an
+in-memory Datomic Peer database, and stops the server when it finishes.
+
+You can also run the in-memory server separately with `clojure -M:runmem`, but
+the Python tutorial always manages its own server.
+
+For a persistent tutorial server backed by Datomic Local, use `run`:
 
 ```sh
 clojure -M:run
 ```
 
-By default it listens on `http://localhost:8091`, creates/uses db `tutorial`,
-and stores Datomic Local data in `.datomic-local-run`.
+It listens on `http://localhost:8091`, creates/uses db `tutorial`, and stores
+Datomic Local data in `.datomic-local-run`.
 
 You can override the defaults with command line options:
 
@@ -76,10 +89,10 @@ Run the tutorial-style HTTP test from this directory:
 clojure -M:test -m tatomic-http.tutorial-test
 ```
 
-The test starts the HTTP server against a fresh Datomic Local database stored in
-`.datomic-local-test`, then runs `test/tutorial_http.py` as a small client
-tutorial. The Python client installs a schema, transacts data, and exercises
-`pull`, `qseq`, `entid`, `ident`, `sync`, `tx->t`, `t->tx`, and `tx-range`.
+The test runs `test/tutorial_http.py` without an endpoint, exercising its
+self-started in-memory Datomic Peer server. The Python client installs a schema,
+transacts data, and exercises `pull`, `qseq`, `entid`, `ident`, `sync`, `tx->t`,
+`t->tx`, and `tx-range`.
 
 The Python tutorial is written with ordinary Python dictionaries and lists.
 At the HTTP edge it converts those structures to `application/json` or
@@ -90,8 +103,8 @@ library so the example remains runnable without extra Python setup.
 
 The tutorial uses a single keep-alive HTTP client session for the whole run. It
 also asks selected endpoints for `application/edn` responses so `/q` and
-`/txrange` use the streaming response path; the transcript prints the request
-and response traffic as it goes.
+`/tx-range` exercise the chunked streaming EDN response path; the transcript
+prints the request and response traffic as it goes.
 
 ## Python tutorial walkthrough
 
@@ -101,16 +114,16 @@ step prints the outgoing request and the incoming response before moving on.
 1. Install the schema with JSON.
 
    The first `/transact` call sends schema attributes for people and
-   assignments. JSON object keys are written as ordinary strings such as
-   `"db/ident"`; the HTTP example turns them into EDN keywords before handing
-   the request to tatomic.
+   assignments. The Python code writes Clojure keywords explicitly as strings,
+   for example `":db/ident"`, so the request data matches what is sent over
+   the wire.
 
 2. Add one person and one assignment with JSON.
 
    The second `/transact` call creates Ada Lovelace, creates an assignment, and
-   connects them with `:person/assignments`. The tutorial gives each run a
-   unique id suffix, so the same local database can be reused without turning
-   the transaction into a no-op.
+   connects them with `:person/assignments`. It uses fixed ids and is intended
+   to run once against a fresh database; clear a persistent database before
+   running it again.
 
 3. Add a larger batch over the same keep-alive connection.
 
@@ -133,8 +146,9 @@ step prints the outgoing request and the incoming response before moving on.
 6. Ask for an EDN query response.
 
    The next `/q` call requests `Accept: application/edn`. The server returns an
-   EDN response instead of JSON, exercising the streaming response path used for
-   larger query results.
+   EDN response instead of JSON. For responses whose main value is `:ret`, EDN
+   and text/plain are sent as chunked streaming bodies; JSON is buffered into a
+   normal response body.
 
 7. Resolve entity ids and idents with mixed request formats.
 
@@ -149,21 +163,22 @@ step prints the outgoing request and the incoming response before moving on.
 
 9. Convert between transaction entity ids and logical t values.
 
-   `/tot/:tx` converts the transaction entity id from the batch transaction to
-   its logical t. Later, `/totx/:t` converts that t back to the same transaction
-   entity id.
+   `/tx-to-t/:tx` converts the transaction entity id from the batch transaction
+   to its logical t. Later, `/t-to-tx/:t` converts that t back to the same
+   transaction entity id.
 
 10. Read the transaction log as EDN.
 
-    `/txrange` streams the transactions from the schema transaction onward. The
-    response contains transaction entries with normalized datoms of the form
-    `[e a v added?]`, where attribute ids have been resolved to idents.
+    `/tx-range` streams the transactions from the schema transaction onward
+    when the client asks for EDN or text/plain. The response contains
+    transaction entries with normalized datoms of the form `[e a v added?]`,
+    where attribute ids have been resolved to idents.
 
 11. Finish with a round trip from t back to tx.
 
-    The final `/totx/:t` call verifies that the logical t from step 9 maps back
-    to the batch transaction entity id. This closes the tutorial with a small
-    consistency check across the transaction-log helpers.
+    The final `/t-to-tx/:t` call verifies that the logical t from step 9 maps
+    back to the batch transaction entity id. This closes the tutorial with a
+    small consistency check across the transaction-log helpers.
 
 ## Request normalization
 
@@ -184,20 +199,26 @@ inputs. If the query does not declare an explicit database input, tatomic
 supplies the current database for `$`. Database inputs can also be a t value,
 `(history)`, or `(history t)`.
 
-The HTTP example also normalizes JSON request bodies into EDN-like data:
+The HTTP server treats JSON as a transport format for Datomic-shaped data. It
+does not guess that a string such as `"query"` or `"person/id"` should be a
+keyword. Keywords and Datalog symbols must be explicit:
 
-- Object keys become keywords, so `"person/id"` and `":person/id"` both become
-  `:person/id`.
-- String values beginning with `:` become keywords.
-- String values beginning with `?` or `$`, and the string `"*"`, become
+- JSON object keys beginning with `:` become keywords.
+- JSON string values beginning with `:` become keywords.
+- JSON string values beginning with `?` or `$`, and the string `"*"`, become
   symbols for Datalog queries.
 - JSON arrays become vectors.
 
-That means JSON can use ordinary object keys while still expressing Datomic
-keywords and Datalog variables in values:
+That means JSON sent to the server should carry Datomic/EDN syntax in strings:
 
 ```json
 {
-  "query": [":find", "?name", ":where", ["?e", ":person/name", "?name"]]
+  ":query": [":find", "?name", ":where", ["?e", ":person/name", "?name"]]
 }
 ```
+
+If a value must literally be a string such as `":name"` or `"?name"`, send an
+EDN request body where strings can be represented without this JSON convention.
+The Python tutorial therefore writes keyword strings such as `":query"` and
+`":person/id"` directly in its request data; it does not add the `:` prefix in
+an encoding step.
