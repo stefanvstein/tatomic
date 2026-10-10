@@ -95,6 +95,11 @@ transacts data, and exercises `pull`, `qseq`, `entid`, `ident`, `sync`, `tx->t`,
 `t->tx`, and `tx-range`.
 
 The Python tutorial is written with ordinary Python dictionaries and lists.
+Its small EDN formatter writes strings beginning with `:` as keyword literals
+and strings beginning with `?` as logical variable literals. Other strings
+stay quoted. Explicit symbols such as `pull`, `$`, and `*` use the `Symbol`
+string subclass. Tuples become EDN lists, for example
+`(Symbol("pull"), LogicalVar("person"), [Keyword("person/name")])`.
 At the HTTP edge it converts those structures to `application/json` or
 `application/edn`, switching formats across the tutorial so the transcript shows
 both request styles without repeating every step. If `httpx` is installed it is
@@ -115,8 +120,8 @@ step prints the outgoing request and the incoming response before moving on.
 
    The first `/transact` call sends schema attributes for people and
    assignments. The Python code writes Clojure keywords explicitly as strings,
-   for example `":db/ident"`, so the request data matches what is sent over
-   the wire.
+   using constants such as `ident = ":db/ident"` above the schema literal,
+   so the request data matches what is sent over the wire.
 
 2. Add one person and one assignment with JSON.
 
@@ -137,9 +142,9 @@ step prints the outgoing request and the incoming response before moving on.
    `:person/assignments` relation to include assignment fields. This
    demonstrates hierarchical selection from an entity and its relations.
 
-5. Query related values with EDN.
+5. Query related values with JSON.
 
-   The `/q` request sends a plain query vector beginning with `:find`. Tatomic
+   The `/q` request sends a JSON array beginning with the string `":find"`. Tatomic
    normalizes that vector to the request shape the adapter expects, supplies the
    current database input, and returns matching person and assignment names.
 
@@ -218,7 +223,18 @@ That means JSON sent to the server should carry Datomic/EDN syntax in strings:
 ```
 
 If a value must literally be a string such as `":name"` or `"?name"`, send an
-EDN request body where strings can be represented without this JSON convention.
-The Python tutorial therefore writes keyword strings such as `":query"` and
-`":person/id"` directly in its request data; it does not add the `:` prefix in
-an encoding step.
+raw EDN request body with explicitly quoted strings; the tutorial's EDN
+formatter also interprets the `:` and `?` prefixes as literals.
+The Python tutorial uses ordinary strings such as `":person/id"` in JSON
+requests and for reading JSON responses. Its EDN request structures use
+explicit `Keyword("person/id")` and `LogicalVar("name")` values, with
+`Symbol("pull")` for other symbols. The EDN formatter also accepts plain
+strings with `:` or `?` prefixes and writes them directly as literals.
+
+JSON responses preserve the leading `:` on keyword keys and values, too.
+For example, `/ident` returns `{":ret": ":person/id", ...}`, and a pull
+result uses keys such as `":person/name"`. Cheshire is configured with
+`:key-fn str`; keyword values are converted to their full string representation
+before encoding. This keeps the keyword convention consistent in requests and
+responses. The Python EDN parser currently returns keyword names without `:`,
+so EDN response assertions use keys such as `"ret"`.

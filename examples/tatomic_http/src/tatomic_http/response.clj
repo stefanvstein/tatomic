@@ -3,7 +3,16 @@
             [tatomic-http.accept :as accept]
             [tatomic-http.body :as body]
             [cheshire.core :as json]
+            [clojure.walk :as walk]
             [clojure.pprint :as pprint]))
+
+(def json-options {:key-fn str})
+
+(defn encode-json [data]
+  ;; :key-fn handles map keys; keyword values also need their leading colon.
+  (json/encode
+   (walk/postwalk #(if (keyword? %) (str %) %) data)
+   json-options))
 
 (defn pprint-str [x]
   (with-out-str
@@ -33,7 +42,7 @@
     :json
     {:status 200
      :headers {"content-type" "application/json; charset=utf-8"}
-     :body (json/encode data)}
+     :body (encode-json data)}
 
     :edn-application
     {:status 200
@@ -53,20 +62,18 @@
    {:on-open (fn [ch]
                (http/send! ch {:status 200
                                :headers {"Content-Type" content-type}
-                               :body "\n{"} false)
+                               :body "{:ret ["} false)
                (try
-                 (http/send! ch ":ret [" false)
                  (doseq [x (:ret data)]
                    (when-not (http/open? ch)
                      (throw (ex-info "client closed" {})))
-                   (http/send! ch (str "\n  " (pr-str x)) false))
-                 (http/send! ch "]" false)
+                   (http/send! ch (str " " (pr-str x)) false))
 
                  (let [remaining
                        (apply str (for [k (keys (dissoc data :ret))]
-                                    (str "\n " k " " (pr-str (get data k)))))]
+                                    (str " " k " " (pr-str (get data k)))))]
                    (when (http/open? ch)
-                     (http/send! ch (str remaining  "}\n") true)))
+                     (http/send! ch (str "]" remaining "}") true)))
                  (catch Throwable t
                    (when (http/open? ch)
                      (http/send! ch
@@ -77,7 +84,7 @@
 (defn ret-response-json [data]
   {:status 200
    :headers {"Content-Type" "application/json"}
-   :body (json/encode (update data :ret vec))})
+   :body (encode-json (update data :ret vec))})
 
 (defn ret-response [req data]
   (case (choose-response-format req)
