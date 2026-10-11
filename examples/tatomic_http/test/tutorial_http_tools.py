@@ -76,21 +76,37 @@ class StdlibKeepAliveClient:
         self.conn.close()
 
     def request(self, method, path, body, headers):
+        if isinstance(body, str):
+            body = body.encode("utf-8")
         self.conn.request(method, path, body=body, headers=headers)
         return self.conn.getresponse()
 
 
+@contextmanager
+def traffic_color(direction):
+    """Color terminal traffic blue for requests and green for responses."""
+    colored = sys.stdout.isatty()
+    if colored:
+        sys.stdout.write("\033[34m" if direction == ">>>" else "\033[32m")
+    try:
+        yield
+    finally:
+        if colored:
+            sys.stdout.write("\033[0m")
+        sys.stdout.flush()
+
+
 def print_traffic(direction, title, headers, body=None):
     """Print raw HTTP headers and body so transport details remain visible."""
-    print(f"\n{direction} {title}")
-    for name, value in headers:
-        print(f"{name}: {value}")
-    if body is not None:
-        print()
-        sys.stdout.write(body)
-        if not body.endswith("\n"):
+    with traffic_color(direction):
+        print(f"\n{direction} {title}")
+        for name, value in headers:
+            print(f"{name}: {value}")
+        if body is not None:
             print()
-    sys.stdout.flush()
+            sys.stdout.write(body)
+            if not body.endswith("\n"):
+                print()
 
 
 def response_chunks(response):
@@ -233,7 +249,7 @@ def http_request(
     method,
     path,
     body=None,
-    accept="application/json",
+    accept="application/edn",
     content_type="application/edn"):
     """Send one request and print the request and response in wire form."""
     url = base_url + path
@@ -246,27 +262,28 @@ def http_request(
     response = client.request(method, path, body, headers)
     print_traffic("<<<", f"{response.status} {method} {path}", response.getheaders())
 
-    if response.chunked:
-        chunks = []
-        print()
-        for data, text in response_chunks(response):
-            sys.stdout.write(f"{len(data):x}\r\n")
-            sys.stdout.write(text)
-            sys.stdout.write("\r\n")
+    with traffic_color("<<<"):
+        if response.chunked:
+            chunks = []
+            print()
+            for data, text in response_chunks(response):
+                sys.stdout.write(f"{len(data):x}\r\n")
+                sys.stdout.write(text)
+                sys.stdout.write("\r\n")
+                sys.stdout.flush()
+                chunks.append(text)
+            sys.stdout.write("0\r\n\r\n")
+            print("----------------")
             sys.stdout.flush()
-            chunks.append(text)
-        sys.stdout.write("0\r\n\r\n")
-        print("----------------")
-        sys.stdout.flush()
-        return response.status, "".join(chunks)
+            return response.status, "".join(chunks)
 
-    text = "".join(text for _, text in response_chunks(response))
-    sys.stdout.write("\n" + text)
-    if not text.endswith("\n"):
-        print()
-    sys.stdout.flush()
-    print("----------------")
-    return response.status, text
+        text = "".join(text for _, text in response_chunks(response))
+        sys.stdout.write("\n" + text)
+        if not text.endswith("\n"):
+            print()
+        sys.stdout.flush()
+        print("----------------")
+        return response.status, text
 
 
 class Client:
@@ -280,8 +297,8 @@ class Client:
         self,
         path,
         body,
-        content_type="application/json",
-        accept="application/json"):
+        content_type="application/edn",
+        accept="application/edn"):
         status, text = http_request(
             self.base_url,
             self.client,
@@ -293,7 +310,7 @@ class Client:
         assert status == 200, f"{path} returned {status}: {text}"
         return text
 
-    def get(self, path, accept="application/json"):
+    def get(self, path, accept="application/edn"):
         status, text = http_request(self.base_url, self.client, "GET", path, accept=accept)
         assert status == 200, f"{path} returned {status}: {text}"
         return text

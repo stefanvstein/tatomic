@@ -95,6 +95,9 @@ transacts data, and exercises `pull`, `qseq`, `entid`, `ident`, `sync`, `tx->t`,
 `t->tx`, and `tx-range`.
 
 The Python tutorial is written with ordinary Python dictionaries and lists.
+Its HTTP client defaults to EDN for both request bodies and responses; examples
+using JSON select `content_type="application/json"` or `accept="application/json"`
+explicitly.
 Its small EDN formatter writes strings beginning with `:` as keyword literals
 and strings beginning with `?` as logical variable literals. Other strings
 stay quoted. Explicit symbols such as `pull`, `$`, and `*` use the `Symbol`

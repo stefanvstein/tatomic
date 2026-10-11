@@ -37,7 +37,7 @@
    x))
 
 (defn read-body [req]
-  (let [body (-> req :body slurp)]
+  (let [body (slurp (:body req) :encoding "UTF-8")]
     (if (json-content? req)
       (json->edn-data (json/parse-string body))
       (edn/read-string body))))
